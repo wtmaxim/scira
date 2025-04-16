@@ -1,0 +1,38 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modèle pour stocker les recherches des utilisateurs
+model Search {
+  id        String     @id @default(uuid())
+  query     String // La requête de recherche de l'utilisateur
+  groupId   String // ID du groupe de recherche utilisé (web, academic, etc.)
+  createdAt DateTime   @default(now())
+  responses Response[] // Relation avec les réponses
+  userId    String? // ID de l'utilisateur (optionnel si pas d'authentification)
+  ip        String? // IP de l'utilisateur (optionnel)
+  userAgent String? // User-Agent du navigateur (optionnel)
+}
+
+// Modèle pour stocker les réponses aux recherches
+model Response {
+  id        String   @id @default(uuid())
+  content   String   @db.Text // Contenu de la réponse
+  createdAt DateTime @default(now())
+  search    Search   @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  searchId  String // Référence à la recherche
+  toolsUsed String[] // Outils utilisés pour générer la réponse
+  metadata  Json? // Métadonnées supplémentaires au format JSON
+}
