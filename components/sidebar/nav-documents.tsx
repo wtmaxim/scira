@@ -107,7 +107,7 @@ export function NavDocuments({
             searches.map((search) => (
               <SidebarMenuItem key={search.id}>
                 <SidebarMenuButton 
-                  onClick={() => router.push(`/search?q=${encodeURIComponent(search.query)}&id=${search.id}`)}
+                  onClick={() => router.push(`/search/${search.id}`)}
                   className="flex items-center justify-between gap-2"
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -132,7 +132,7 @@ export function NavDocuments({
                     align={isMobile ? "end" : "start"}
                   >
                     <DropdownMenuItem 
-                      onClick={() => router.push(`/search?q=${encodeURIComponent(search.query)}&id=${search.id}`)}
+                      onClick={() => router.push(`/search/${search.id}`)}
                     >
                       <FolderIcon className="mr-2 h-4 w-4" />
                       <span>Ouvrir la recherche</span>
