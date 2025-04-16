@@ -6,6 +6,47 @@ import { SearchGroupId } from '@/lib/utils';
 import { xai } from '@ai-sdk/xai';
 import { generateObject } from 'ai';
 import { z } from 'zod';
+import { searchService, responseService } from '@/lib/prisma/services';
+import { headers } from 'next/headers';
+
+// Fonction pour enregistrer une recherche et sa réponse dans la base de données
+export async function saveSearchAndResponse(
+  query: string, 
+  groupId: SearchGroupId, 
+  responseContent: string,
+  toolsUsed: string[] = [],
+  metadata: any = {}
+) {
+  'use server';
+  
+  try {
+    // Récupération des informations du client
+    const headersList = await headers();
+    const userAgent = headersList.get('user-agent') || undefined;
+    const ip = headersList.get('x-forwarded-for') || undefined;
+    
+    // Création de la recherche
+    const search = await searchService.createSearch({
+      query,
+      groupId,
+      ip,
+      userAgent
+    });
+    
+    // Création de la réponse
+    await responseService.createResponse({
+      content: responseContent,
+      searchId: search.id,
+      toolsUsed,
+      metadata
+    });
+    
+    return { success: true, searchId: search.id };
+  } catch (error) {
+    console.error('Error saving search and response:', error);
+    return { success: false, error: 'Failed to save search and response' };
+  }
+}
 
 export async function suggestQuestions(history: any[]) {
   'use server';

@@ -8,6 +8,9 @@ import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Toaster } from "sonner";
 import "./globals.css";
 import { Providers } from './providers';
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { SiteHeader } from "@/components/sidebar/site-header";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://scira.ai"),
@@ -60,10 +63,10 @@ export const viewport: Viewport = {
   ],
 }
 
-const syne = Syne({ 
-  subsets: ['latin'], 
+const syne = Syne({
+  subsets: ['latin'],
   variable: '--font-syne',
-   preload: true,
+  preload: true,
   display: 'swap',
 });
 
@@ -77,8 +80,20 @@ export default function RootLayout({
       <body className={`${GeistSans.variable} ${syne.variable} font-sans antialiased`} suppressHydrationWarning>
         <NuqsAdapter>
           <Providers>
-            <Toaster position="top-center" />
-            {children}
+            <SidebarProvider>
+              <Toaster position="top-center" />
+              <AppSidebar variant="inset" />
+              <SidebarInset>
+                <SiteHeader />
+                <div className="flex flex-1 flex-col">
+                  <div className="@container/main flex flex-1 flex-col gap-2">
+                    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                      {children}
+                    </div>
+                  </div>
+                </div>
+              </SidebarInset>
+            </SidebarProvider>
           </Providers>
         </NuqsAdapter>
         <Analytics />

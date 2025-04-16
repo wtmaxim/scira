@@ -38,7 +38,7 @@ import { cn, getUserId, SearchGroupId } from '@/lib/utils';
 import { Wave } from "@foobar404/wave";
 import { CheckCircle, Info, Memory, RoadHorizon, XLogo, Clock as PhosphorClock, CalendarBlank } from '@phosphor-icons/react';
 import { TextIcon } from '@radix-ui/react-icons';
-import { ToolInvocation } from 'ai';
+import { Message, ToolInvocation } from 'ai';
 import { useChat, UseChatOptions } from '@ai-sdk/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GeistMono } from 'geist/font/mono';
@@ -100,7 +100,8 @@ import { Tweet } from 'react-tweet';
 import { toast } from 'sonner';
 import {
     generateSpeech,
-    suggestQuestions
+    suggestQuestions,
+    saveSearchAndResponse
 } from './actions';
 import InteractiveStockChart from '@/components/interactive-stock-chart';
 import { CurrencyConverter } from '@/components/currency_conv';
@@ -645,6 +646,32 @@ const MemoizedYouTubeCard = React.memo(YouTubeCard, (prevProps, nextProps) => {
     );
 });
 
+// Function to extract sources from markdown content
+const extractSources = (content: string): string[] => {
+  const sources: string[] = [];
+  // Extract markdown links [text](url)
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let match;
+  
+  while ((match = linkRegex.exec(content)) !== null) {
+    if (match[2] && isValidUrl(match[2])) {
+      sources.push(match[2]);
+    }
+  }
+  
+  return [...new Set(sources)]; // Remove duplicates
+};
+
+// Function to validate URL
+const isValidUrl = (string: string): boolean => {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
+};
+
 const HomeContent = () => {
     const [query] = useQueryState('query', parseAsString.withDefault(''))
     const [q] = useQueryState('q', parseAsString.withDefault(''))
@@ -683,9 +710,39 @@ const HomeContent = () => {
             user_id: userId,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         },
-        onFinish: async (message, { finishReason }) => {
+        onFinish: async (message: Message, { finishReason }) => {
             console.log("[finish reason]:", finishReason);
             if (message.content && (finishReason === 'stop' || finishReason === 'length')) {
+                // Sauvegarder la recherche et la réponse dans la base de données
+                try {
+                    // Utilise un array vide si aucun outil n'est utilisé
+                    const toolsUsed: string[] = [];
+                    
+                    // Récupère les métadonnées pour la sauvegarde
+                    const metadata = {
+                        sources: extractSources(message.content),
+                        timestamp: new Date().toISOString(),
+                        finishReason
+                    };
+                    
+                    const result = await saveSearchAndResponse(
+                        lastSubmittedQueryRef.current,
+                        selectedGroup,
+                        message.content,
+                        toolsUsed,
+                        metadata
+                    );
+                    
+                    if (result.success) {
+                        console.log('Recherche et réponse sauvegardées avec succès, ID:', result.searchId);
+                    } else {
+                        console.error('Erreur lors de la sauvegarde:', result.error);
+                    }
+                } catch (saveError) {
+                    console.error('Erreur lors de la sauvegarde de la recherche:', saveError);
+                }
+                
+                // Génération des questions suggérées
                 const newHistory = [
                     { role: "user", content: lastSubmittedQueryRef.current },
                     { role: "assistant", content: message.content },
@@ -1823,7 +1880,7 @@ const HomeContent = () => {
 
     return (
         <div className="flex flex-col !font-sans items-center min-h-screen bg-background text-foreground transition-all duration-500">
-            <Navbar />
+            {/* <Navbar /> */}
 
             <div className={`w-full p-2 sm:p-4 ${status === 'ready' && messages.length === 0
                 ? 'min-h-screen flex flex-col items-center justify-center' // Center everything when no messages
@@ -3331,10 +3388,9 @@ const AttachmentsBadge = ({ attachments }: { attachments: any[] }) => {
 
 const Home = () => {
     return (
-        <Suspense fallback={<LoadingFallback />}>
+        <main className="min-h-screen w-full">
             <HomeContent />
-            <InstallPrompt />
-        </Suspense>
+        </main>
     );
 };
 
